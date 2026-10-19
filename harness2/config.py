@@ -164,10 +164,6 @@ CODEX_CONTAINER_URL = env("HARNESS2_CODEX_CONTAINER_URL", CODEX_BASE_URL)
 VERTEX_PROXY_KEY = env("HARNESS2_CODEX_API_KEY", "")
 CODEX_HOME_DIR = DEPENDENCIES / "codex" / "home"
 
-# Antigravity is normally installed and authenticated as a user CLI. For WorkBuddy
-# it must also be available inside a container, so setup snapshots the selected
-# executable under dependencies/antigravity/dist and bind-mounts that immutable copy.
-ANTIGRAVITY_DIST = DEPENDENCIES / "antigravity" / "dist"
 ANTIGRAVITY_API_KEY = env("HARNESS2_ANTIGRAVITY_API_KEY", env("GEMINI_API_KEY", ""))
 ANTIGRAVITY_BASE_URL = env(
     "HARNESS2_ANTIGRAVITY_BASE_URL", env("GOOGLE_GEMINI_BASE_URL", "")
