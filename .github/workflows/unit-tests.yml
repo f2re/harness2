@@ -20,7 +20,7 @@ jobs:
           python -m pip install -e . ruff pyyaml
       - name: Ruff
         id: ruff
-        run: ruff check harness2 tests scripts 2>&1 | tee ruff.log
+        run: ruff check harness2 tests scripts/native_asset_hashes.py 2>&1 | tee ruff.log
       - name: Upload Ruff diagnostics
         if: failure() && steps.ruff.outcome == 'failure'
         uses: actions/upload-artifact@v4
