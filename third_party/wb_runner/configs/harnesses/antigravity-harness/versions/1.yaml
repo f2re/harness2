@@ -1,0 +1,6 @@
+# The CLI executable itself is snapshotted by harness2-setup and mounted read-only.
+harness:
+  params:
+    AGY_BIN_DIR: "/opt/antigravity"
+    AGY_EFFORT: "high"
+    AGY_PRINT_TIMEOUT: "60m"
