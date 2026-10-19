@@ -1,8 +1,8 @@
 # Upstream pins and patches
 
-`harness2/config.py` is the authoritative pin table. The setup script fetches
-these commits directly from the public remotes and refuses to overwrite a
-checkout at another revision.
+`harness2/config.py` is the authoritative benchmark pin table. The setup script fetches
+these commits directly from the public remotes and refuses to overwrite a checkout at
+another revision.
 
 | Repository | Commit |
 |---|---|
@@ -20,23 +20,37 @@ checkout at another revision.
   cap, and rejects empty completions.
 - `harvey-labs-judge-vertex-anthropic.diff`: adds Claude and Gemini Vertex judges
   using ADC and improves malformed/ambiguous response handling.
-- `workbuddy-bench-runtime.diff`: registers the release's executor adapters,
-  preserves declared harness mounts, refreshes short-lived credentials, and
-  preserves Gemini thought signatures across tool calls. It also fixes an
-  undefined constant in the upstream Anthropic route support.
+- `workbuddy-bench-runtime.diff`: registers the release's original adaptive
+  executor adapters, preserves declared harness mounts, refreshes short-lived
+  credentials, and preserves Gemini thought signatures across tool calls. It
+  also fixes an undefined constant in the upstream Anthropic route support.
 
-Patches are checked before applying and skipped if already applied. Derived runner
-files belong in `harness2/third_party/{jb,lab,wb}_runner/`, which this copy does not
-include; setup copies the LAB and WorkBuddy overlays into the upstream checkouts.
+Patches are checked before applying and skipped if already applied. Release-owned runner
+files live under `third_party/{jb,lab,wb}_runner/`; setup copies LAB and WorkBuddy overlays
+into the pinned upstream checkouts. The WorkBuddy overlay additionally installs the complete
+runtime harness registry so the patched `run.sh` recognizes OpenCode, Codex, Claude Code, and
+Antigravity adaptive harnesses.
 
-The upstream dependency locks are used for Python installations. OpenCode uses
-Bun 1.3.11 and the patched lock. Codex uses the version in `config.CODEX_VERSION`.
-JobBench's Hugging Face revision is resolved once for a download and recorded in
-`dataset/main/.harness2-download.json`. WorkBuddy's dataset fetcher, as patched
-by setup, verifies each archive against the dataset repository's `SHA256SUMS` and
-refuses one it cannot verify; see
-[the WorkBuddy guide](../docs/BENCHMARKS.md#workbuddy-bench). LAB task files are part of its pinned Git checkout.
+## Executor versions
 
-These inputs support the public execution workflow. Historical paper runs may
-have used different tasks, model deployments, and additional local tooling;
-see [experiment notes](../README.md#experiments).
+OpenCode uses the pinned checkout above with Bun 1.3.11. Codex uses
+`config.CODEX_VERSION`. WorkBuddy Claude uses upstream Claude Code `2.1.187`, explicitly passed
+to the split-mount Docker build. Host-side JobBench/LAB Claude uses the user's installed Claude
+Code CLI and records the selected model/run identity.
+
+WorkBuddy Antigravity integration contract `1` builds a Linux `agy` split-mount image with
+Google's official Antigravity CLI installer and prints `agy --version` during the image build.
+The public installer currently does not expose a documented version-select argument, so exact
+binary replay requires retaining/tagging the built image. Host-side JobBench/LAB Antigravity
+uses the user's installed `agy` executable (or `HARNESS2_ANTIGRAVITY_BIN`).
+
+The upstream dependency locks are used for Python installations. JobBench's Hugging Face
+revision is resolved once for a download and recorded in `dataset/main/.harness2-download.json`.
+WorkBuddy's dataset fetcher, as patched by setup, verifies each archive against the dataset
+repository's `SHA256SUMS` and refuses one it cannot verify; see
+[the WorkBuddy guide](../docs/BENCHMARKS.md#workbuddy-bench). LAB task files are part of its
+pinned Git checkout.
+
+These inputs support the public execution workflow. Historical paper runs may have used
+different tasks, model deployments, and additional local tooling; see
+[experiment notes](../README.md#experiments).
