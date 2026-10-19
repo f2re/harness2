@@ -223,7 +223,9 @@ class WbNativeAdapter(WbAdapter):
             allow_subagents=True,
         )
         if substrate == "cc":
-            self.model = model or config.SOLVER_MODEL_CC
+            # WorkBuddy's pinned CcAgent talks to the benchmark's local Anthropic
+            # proxy, whose backend is HARNESS2_SOLVER_MODEL—not the host Claude setting.
+            self.model = model or config.SOLVER_MODEL_OC
             self.substrate = ClaudeSubstrate(launcher=self._launch_native)
         else:
             self.model = model or config.SOLVER_MODEL_AG
@@ -232,8 +234,7 @@ class WbNativeAdapter(WbAdapter):
     def _cell_identity(self) -> dict:
         if self.substrate.name == "cc":
             return {
-                "solver": config.SOLVER_MODEL_OC,
-                "native_model": self.model,
+                "solver": self.model,
                 "cc_ver": config.WB_CC_HARNESS_VER,
                 "connection": config.WB_MODEL_CONNECTION,
             }
