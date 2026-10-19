@@ -5,7 +5,6 @@ on:
   push:
     branches:
       - main
-      - feature/claude-antigravity-substrates
 
 jobs:
   test:
@@ -20,6 +19,14 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -e . ruff
       - name: Ruff
-        run: ruff check harness2 tests
+        id: ruff
+        run: ruff check harness2 tests 2>&1 | tee ruff.log
+      - name: Upload Ruff diagnostics
+        if: failure() && steps.ruff.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ruff-diagnostics
+          path: ruff.log
       - name: Unit tests
+        if: always()
         run: python -m unittest discover -s tests -p 'test_*.py' -v
