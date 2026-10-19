@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import tempfile
 from pathlib import Path
@@ -99,6 +100,36 @@ def _copy_if_exists(src: Path, dst: Path) -> None:
         shutil.copy2(src, dst)
 
 
+def _compile_skill(src_dir: Path, dst_dir: Path) -> None:
+    """Copy one portable skill and make its manifest valid for Claude Code.
+
+    Codex/Antigravity can infer a missing `name:` from the directory. Claude's
+    Agent Skills manifest requires it, so the compiler adds the directory name
+    without mutating the portable source tree.
+    """
+    name = src_dir.name
+    if not re.fullmatch(r"[a-z0-9][a-z0-9-]*", name):
+        raise ValueError(
+            f"portable skill {name!r} is not Claude-compatible; use lowercase letters, "
+            "digits and hyphens so one skill name works across substrates"
+        )
+    shutil.copytree(src_dir, dst_dir, dirs_exist_ok=True)
+    manifest = dst_dir / "SKILL.md"
+    if not manifest.is_file():
+        return
+    text = manifest.read_text(encoding="utf-8", errors="replace")
+    if text.lstrip().startswith("---"):
+        head_end = text.find("---", text.find("---") + 3)
+        head = text[: head_end if head_end >= 0 else min(len(text), 1200)]
+        if not re.search(r"(?m)^name:\s*\S+", head):
+            text = text.replace("---\n", f"---\nname: {name}\n", 1)
+    else:
+        m = re.search(r"(?m)^description:\s*(\S.*)$", text[:1200])
+        desc = m.group(1).strip() if m else f"Portable Harness2 skill {name}"
+        text = f"---\nname: {name}\ndescription: {desc}\n---\n\n" + text
+    manifest.write_text(text, encoding="utf-8")
+
+
 def _resolve_binary() -> str:
     configured = os.environ.get("HARNESS2_CLAUDE_BIN", "claude")
     p = Path(configured).expanduser()
@@ -135,8 +166,12 @@ class ClaudeSubstrate:
 
         staged = Path(tempfile.mkdtemp(prefix="adapt-cc-root-"))
         _copy_if_exists(tree_dir / "AGENTS.md", staged / "CLAUDE.md")
-        _copy_if_exists(tree_dir / ".agents" / "skills", staged / ".claude" / "skills")
         _copy_if_exists(tree_dir / "scripts", staged / "scripts")
+
+        skills = tree_dir / ".agents" / "skills"
+        if skills.is_dir():
+            for skill_md in sorted(skills.glob("*/SKILL.md")):
+                _compile_skill(skill_md.parent, staged / ".claude" / "skills" / skill_md.parent.name)
 
         hooks = tree_dir / ".codex" / "hooks.json"
         if hooks.is_file():
