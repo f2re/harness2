@@ -12,7 +12,7 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class Capabilities:
-    """Features a solver substrate can expose to an editable harness."""
+    """Features a solver substrate can expose through the editable Harness² surface."""
 
     skills: bool = True
     subagents: bool = True
@@ -26,7 +26,10 @@ class Capabilities:
 OPENCODE_CAPABILITIES = Capabilities(plugins=True, resume=True)
 CODEX_CAPABILITIES = Capabilities(resume=True)
 CLAUDE_CAPABILITIES = Capabilities(resume=True)
-ANTIGRAVITY_CAPABILITIES = Capabilities(plugins=True, resume=True)
+# Antigravity itself supports installable plugins, but this first native Harness²
+# surface intentionally exposes the portable c1..c8 subset only; plugin bundle
+# compilation is not yet part of materialisation.
+ANTIGRAVITY_CAPABILITIES = Capabilities(plugins=False, resume=True)
 
 
 __all__ = [
