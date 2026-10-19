@@ -2,11 +2,6 @@ harness:
   params:
     CLAUDE_CODE_VERSION: "2.1.187"
   settings_file: configs/harnesses/claude-code/presets/settings/v2_1.json
-  mount:
-    build:
-      args:
-        CLAUDE_CODE_VERSION: "2.1.187"
-        MOUNT_PATH: "/opt/claude-code"
   env:
     CLAUDE_CODE_EFFORT_LEVEL: "max"
     CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"
