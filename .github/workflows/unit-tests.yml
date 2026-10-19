@@ -37,3 +37,12 @@ jobs:
         with:
           name: unittest-diagnostics
           path: unittest.log
+      - name: Generate WorkBuddy asset hashes
+        if: always()
+        run: python scripts/native_asset_hashes.py > native-assets.json
+      - name: Upload WorkBuddy asset hashes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-assets-sha256
+          path: native-assets.json
