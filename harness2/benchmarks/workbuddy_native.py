@@ -25,7 +25,6 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-import re
 import shutil
 import signal
 import subprocess
@@ -70,7 +69,15 @@ def _harness_slug(substrate: str) -> str:
     raise ValueError(f"not a native WorkBuddy substrate: {substrate!r}")
 
 
-def _native_job_yaml(subset, substrate: str, label: str, tasks: list[str], ws: Path | None, k: int, jobs_dir: Path) -> str:
+def _native_job_yaml(
+    subset,
+    substrate: str,
+    label: str,
+    tasks: list[str],
+    ws: Path | None,
+    k: int,
+    jobs_dir: Path,
+) -> str:
     selected = "\n".join(f"    - {task}" for task in tasks)
     hp: dict[str, str] = {}
     if ws is not None:
@@ -95,12 +102,6 @@ def _native_job_yaml(subset, substrate: str, label: str, tasks: list[str], ws: P
             )
         extra = (
             f"extra_allowed_hosts:\n{host_lines}\n"
-            "environment_override:\n"
-            "  mounts:\n"
-            "    - type: bind\n"
-            f"      source: {config.ANTIGRAVITY_DIST}\n"
-            "      target: /opt/antigravity\n"
-            "      read_only: true\n"
             "env_override:\n"
             + "\n".join(env_lines)
             + "\n"
@@ -311,22 +312,16 @@ class WbNativeAdapter(WbAdapter):
         harness_cfg = repo / "configs" / "harnesses" / family / "versions" / f"{version}.yaml"
         if not harness_cfg.is_file():
             raise RuntimeError(f"WorkBuddy harness config missing at {harness_cfg}; rerun setup")
-        if self.substrate.name == "cc":
-            # The executable lives in the built WorkBuddy split mount, not necessarily on host.
-            source = repo / "src" / "workbuddy_bench" / "agents" / "claude_harness_agent.py"
-            if not source.is_file():
-                raise RuntimeError("WorkBuddy Claude harness agent missing; rerun setup")
-        else:
-            staged = config.ANTIGRAVITY_DIST / "agy"
-            if not staged.is_file():
-                raise RuntimeError(
-                    f"staged Antigravity binary missing at {staged}; run harness2-setup wb --substrate ag"
-                )
-            if not config.ANTIGRAVITY_API_KEY:
-                raise RuntimeError(
-                    "HARNESS2_ANTIGRAVITY_API_KEY (or GEMINI_API_KEY) is required for "
-                    "containerized WorkBuddy Antigravity runs"
-                )
+        agent_name = (
+            "claude_harness_agent.py" if self.substrate.name == "cc" else "agy_harness_agent.py"
+        )
+        if not (repo / "src" / "workbuddy_bench" / "agents" / agent_name).is_file():
+            raise RuntimeError(f"WorkBuddy native agent {agent_name} missing; rerun setup")
+        if self.substrate.name == "ag" and not config.ANTIGRAVITY_API_KEY:
+            raise RuntimeError(
+                "HARNESS2_ANTIGRAVITY_API_KEY (or GEMINI_API_KEY) is required for "
+                "containerized WorkBuddy Antigravity runs"
+            )
 
     def _killed(self, run_dir: Path) -> bool:
         try:
