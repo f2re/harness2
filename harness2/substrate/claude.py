@@ -5,12 +5,13 @@
 
 """Claude Code solver substrate.
 
-The editable tree stays Harness²-shaped: CLAUDE.md is the always-on body,
-`.claude/skills/` holds skills, `sub_agents/<name>/AGENT.md` is the canonical
-subagent representation, scripts are deterministic helpers, and
-`.claude/settings.json` carries lifecycle hooks. Materialisation compiles the
-canonical subagent representation into Claude Code's native `.claude/agents/`
-layout.
+Claude uses the same canonical editable Harness IR as Codex: `AGENTS.md`,
+`.agents/skills/`, `sub_agents/<name>/AGENT.md`, `scripts/`, and
+`.codex/hooks.json`. Materialisation compiles that portable representation to
+Claude Code's native `CLAUDE.md`, `.claude/skills/`, `.claude/agents/`, and
+`.claude/settings.json`. Keeping one IR lets the existing Harness² editor and
+experience library compare substrates without teaching the improver four path
+vocabularies.
 """
 
 from __future__ import annotations
@@ -28,36 +29,37 @@ from ..core.tree import SurfaceSpec
 from .base import Install, Launcher, RunRequest
 from .capabilities import CLAUDE_CAPABILITIES
 
+# Deliberately shares the Codex surface name and canonical paths. The substrate
+# name remains `cc`; SurfaceSpec describes the portable edit grammar, not the
+# files ultimately consumed by Claude Code.
 CLAUDE_SURFACE = SurfaceSpec(
-    name="claude",
-    always_on=("CLAUDE.md",),
-    always_on_max=24_000,
-    always_on_cap_reason="CLAUDE.md is injected into project context; keep durable guidance concise",
-    skill_dir=".claude/skills",
+    name="codex",
+    always_on=("AGENTS.md",),
+    always_on_max=8_000,
+    always_on_cap_reason="portable always-on guidance is injected into every Claude Code run",
+    skill_dir=".agents/skills",
     skill_name_rule="overrides_dir",
     trigger_hint=(
-        'Fix it by adding a trigger line naming `{name}` to CLAUDE.md, e.g. "When '
-        "<the situation this skill handles>, read .claude/skills/{name}/SKILL.md and follow it.\""
+        'Fix it by adding a trigger line naming `{name}` to AGENTS.md, e.g. "When '
+        "<the situation this skill handles>, read .agents/skills/{name}/SKILL.md and follow it.\""
     ),
-    autotrigger_file="CLAUDE.md",
-    trigger_line="- When {desc}, read .claude/skills/{name}/SKILL.md and follow it.\n",
+    autotrigger_file="AGENTS.md",
+    trigger_line="- When {desc}, read .agents/skills/{name}/SKILL.md and follow it.\n",
     subagent_requires_mode=False,
     plugin_dir=None,
-    hooks_file=".claude/settings.json",
+    hooks_file=".codex/hooks.json",
     hook_events=frozenset(
         {
             "PreToolUse",
             "PostToolUse",
             "PermissionRequest",
-            "Notification",
-            "UserPromptSubmit",
-            "SessionStart",
-            "SessionEnd",
-            "Stop",
-            "SubagentStart",
-            "SubagentStop",
             "PreCompact",
             "PostCompact",
+            "SessionStart",
+            "SubagentStart",
+            "SubagentStop",
+            "UserPromptSubmit",
+            "Stop",
         }
     ),
     compile_skill_scripts=True,
@@ -69,14 +71,19 @@ CLAUDE_SURFACE = SurfaceSpec(
         ),
         (
             "sub_agents/README.md",
-            "<!-- c5: canonical delegated agents. Add sub_agents/<name>/AGENT.md with "
-            "`description:` frontmatter; materialisation installs it as "
+            "<!-- c5: portable delegated agents. Add sub_agents/<name>/AGENT.md with "
+            "`description:` frontmatter; the Claude compiler installs it as "
             ".claude/agents/<name>.md. -->\n",
         ),
         (
-            ".claude/skills/README.md",
-            "<!-- c6: Claude Code project skills. Add .claude/skills/<name>/SKILL.md "
-            "with `description:` frontmatter. -->\n",
+            ".agents/skills/README.md",
+            "<!-- c6: portable skills. Add .agents/skills/<name>/SKILL.md with "
+            "`description:` frontmatter; the Claude compiler installs it under .claude/skills/. -->\n",
+        ),
+        (
+            ".codex/README.md",
+            "<!-- c8 portable lifecycle hooks. Use the normalized top-level `hooks` object; "
+            "the Claude compiler installs it as .claude/settings.json. -->\n",
         ),
     ),
 )
@@ -124,15 +131,19 @@ class ClaudeSubstrate:
             )
         tree_dir = Path(tree_dir)
         if not HT.is_tree(CLAUDE_SURFACE, tree_dir):
-            raise ValueError(f"{tree_dir} is not a Claude harness tree (no CLAUDE.md)")
+            raise ValueError(f"{tree_dir} is not a portable harness tree (no AGENTS.md)")
 
         staged = Path(tempfile.mkdtemp(prefix="adapt-cc-root-"))
-        _copy_if_exists(tree_dir / "CLAUDE.md", staged / "CLAUDE.md")
-        _copy_if_exists(tree_dir / ".claude" / "skills", staged / ".claude" / "skills")
-        _copy_if_exists(
-            tree_dir / ".claude" / "settings.json", staged / ".claude" / "settings.json"
-        )
+        _copy_if_exists(tree_dir / "AGENTS.md", staged / "CLAUDE.md")
+        _copy_if_exists(tree_dir / ".agents" / "skills", staged / ".claude" / "skills")
         _copy_if_exists(tree_dir / "scripts", staged / "scripts")
+
+        hooks = tree_dir / ".codex" / "hooks.json"
+        if hooks.is_file():
+            settings = json.loads(hooks.read_text(encoding="utf-8"))
+            target = staged / ".claude" / "settings.json"
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(json.dumps(settings, indent=2) + "\n", encoding="utf-8")
 
         sub_dir = tree_dir / "sub_agents"
         if sub_dir.is_dir():
