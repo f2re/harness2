@@ -52,12 +52,9 @@ def main(argv=None):
             ):
                 if not shutil.which(binary):
                     raise RuntimeError(f"Missing {binary}; see README.md")
-            # JobBench/LAB execute native CLIs on the host. WorkBuddy builds the
-            # corresponding Linux CLI into a split-mount image instead.
-            if args.benchmark != "wb" and args.substrate == "cc" and not shutil.which("claude"):
-                raise RuntimeError("Missing Claude Code CLI (`claude`); see docs/NATIVE_SUBSTRATES.md")
-            if args.benchmark != "wb" and args.substrate == "ag" and not shutil.which("agy"):
-                raise RuntimeError("Missing Antigravity CLI (`agy`); see docs/NATIVE_SUBSTRATES.md")
+            # Native host CLI presence is checked by the substrate preflight after
+            # setup. That resolver honors HARNESS2_CLAUDE_BIN / HARNESS2_ANTIGRAVITY_BIN,
+            # unlike a bare shutil.which() check here.
         install.clone("opencode", dry_run=dry)
         install.patch("opencode", dry_run=dry)
         install.run(
