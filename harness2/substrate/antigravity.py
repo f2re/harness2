@@ -5,9 +5,11 @@
 
 """Google Antigravity CLI solver substrate.
 
-Harness² keeps a compact canonical editable surface and compiles it to the
-workspace conventions consumed by `agy`: AGENTS.md, `.agents/skills/`,
-`.agents/agents/`, `.agents/hooks.json`, and scripts.
+Antigravity uses the same canonical editable Harness IR as Codex: `AGENTS.md`,
+`.agents/skills/`, `sub_agents/<name>/AGENT.md`, `scripts/`, and
+`.codex/hooks.json`. Materialisation preserves the compatible paths and compiles
+subagents plus normalized hooks to Antigravity's native `.agents/agents/` and
+`.agents/hooks.json` representations.
 """
 
 from __future__ import annotations
@@ -26,10 +28,10 @@ from .base import Install, Launcher, RunRequest
 from .capabilities import ANTIGRAVITY_CAPABILITIES
 
 ANTIGRAVITY_SURFACE = SurfaceSpec(
-    name="antigravity",
+    name="codex",
     always_on=("AGENTS.md",),
-    always_on_max=24_000,
-    always_on_cap_reason="workspace rules consume model context; keep durable guidance concise",
+    always_on_max=8_000,
+    always_on_cap_reason="portable always-on guidance consumes Antigravity context on every run",
     skill_dir=".agents/skills",
     skill_name_rule="overrides_dir",
     trigger_hint=(
@@ -40,9 +42,7 @@ ANTIGRAVITY_SURFACE = SurfaceSpec(
     trigger_line="- When {desc}, read .agents/skills/{name}/SKILL.md and follow it.\n",
     subagent_requires_mode=False,
     plugin_dir=None,
-    # Harness² stores hooks in its normalized Claude-style shape and compiles
-    # them to Antigravity's named-hook shape during materialisation.
-    hooks_file=".agents/hooks.json",
+    hooks_file=".codex/hooks.json",
     hook_events=frozenset(
         {"SessionStart", "PreToolUse", "PostToolUse", "PreInvocation", "PostInvocation", "Stop"}
     ),
@@ -55,13 +55,18 @@ ANTIGRAVITY_SURFACE = SurfaceSpec(
         ),
         (
             "sub_agents/README.md",
-            "<!-- c5: canonical delegated agents. Add sub_agents/<name>/AGENT.md with "
-            "`description:` frontmatter; materialisation installs it under .agents/agents/. -->\n",
+            "<!-- c5: portable delegated agents. Add sub_agents/<name>/AGENT.md with "
+            "`description:` frontmatter; the Antigravity compiler installs it under "
+            ".agents/agents/. -->\n",
         ),
         (
             ".agents/skills/README.md",
-            "<!-- c6: Antigravity workspace skills. Add .agents/skills/<name>/SKILL.md "
-            "with `description:` frontmatter. -->\n",
+            "<!-- c6: portable skills; Antigravity consumes these paths natively. -->\n",
+        ),
+        (
+            ".codex/README.md",
+            "<!-- c8 portable lifecycle hooks. Use the normalized top-level `hooks` object; "
+            "the Antigravity compiler emits native .agents/hooks.json. -->\n",
         ),
     ),
 )
@@ -155,14 +160,14 @@ class AntigravitySubstrate:
             )
         tree_dir = Path(tree_dir)
         if not HT.is_tree(ANTIGRAVITY_SURFACE, tree_dir):
-            raise ValueError(f"{tree_dir} is not an Antigravity harness tree (no AGENTS.md)")
+            raise ValueError(f"{tree_dir} is not a portable harness tree (no AGENTS.md)")
 
         staged = Path(tempfile.mkdtemp(prefix="adapt-ag-root-"))
         _copy_if_exists(tree_dir / "AGENTS.md", staged / "AGENTS.md")
         _copy_if_exists(tree_dir / ".agents" / "skills", staged / ".agents" / "skills")
         _copy_if_exists(tree_dir / "scripts", staged / "scripts")
 
-        hooks = tree_dir / ".agents" / "hooks.json"
+        hooks = tree_dir / ".codex" / "hooks.json"
         if hooks.is_file():
             target = staged / ".agents" / "hooks.json"
             target.parent.mkdir(parents=True, exist_ok=True)
