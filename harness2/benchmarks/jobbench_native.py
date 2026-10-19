@@ -86,10 +86,10 @@ class JobBenchNativeAdapter(JobBenchAdapter):
         self.store = Path(store_root) if store_root else config.RUNS / "jb" / "dataset"
 
         if substrate == "cc":
-            self.model = model or os.environ.get("HARNESS2_CLAUDE_MODEL", "")
+            self.model = model or config.SOLVER_MODEL_CC
             self.substrate = ClaudeSubstrate(launcher=self._launch_native)
         else:
-            self.model = model or os.environ.get("HARNESS2_ANTIGRAVITY_MODEL", "")
+            self.model = model or config.SOLVER_MODEL_AG
             self.substrate = AntigravitySubstrate(launcher=self._launch_native)
 
     def base_harness(self) -> Path:
@@ -144,6 +144,9 @@ class JobBenchNativeAdapter(JobBenchAdapter):
                 argv = self.substrate.exec_argv(
                     prompt, workspace, self.model, reasoning_effort="high"
                 )
+                # Antigravity print mode defaults to five minutes, shorter than a
+                # JobBench cell. Keep its internal ceiling aligned with the harness.
+                argv += ["--print-timeout", f"{int(timeout)}s"]
 
             with trajectory.open("w", encoding="utf-8") as out, log_file.open(
                 "a", encoding="utf-8"
