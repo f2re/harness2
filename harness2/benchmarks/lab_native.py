@@ -16,7 +16,7 @@
 
 The benchmark-facing contract remains the one implemented by :class:`LabAdapter`:
 run directories, output extraction, resume markers, judging and reporting are
-unchanged.  This module only owns native CLI workspace staging and execution.
+unchanged. This module only owns native CLI workspace staging and execution.
 """
 
 from __future__ import annotations
@@ -151,7 +151,6 @@ class LabNativeAdapter(LabAdapter):
                     argv = self.substrate.exec_argv(
                         prompt, workspace, self.model, reasoning_effort=self.solver_effort
                     )
-                    # Antigravity's headless default is five minutes; LAB tasks are longer.
                     argv += ["--print-timeout", f"{int(req.timeout)}s"]
 
                 env = _lab_env()
@@ -220,15 +219,14 @@ class LabNativeAdapter(LabAdapter):
                 f"LAB interpreter missing at {config.LAB_PYTHON}; run harness2-setup lab"
             )
         read_doc = config.lab_repo() / "opencode" / "scripts" / "read_doc.py"
+        parser = config.lab_repo() / "sandbox" / "parsers" / "parse_doc.py"
         if not read_doc.is_file():
             raise RuntimeError(f"LAB document reader missing at {read_doc}; run harness2-setup lab")
+        if not parser.is_file():
+            raise RuntimeError(f"LAB document parser missing at {parser}; run harness2-setup lab")
         try:
             r = subprocess.run(
-                [
-                    str(config.LAB_PYTHON),
-                    "-c",
-                    "import evaluation.scoring; import sandbox.parsers.parse_doc",
-                ],
+                [str(config.LAB_PYTHON), "-c", "import evaluation.scoring"],
                 cwd=config.lab_repo(),
                 env=_lab_env(),
                 capture_output=True,
@@ -239,8 +237,7 @@ class LabNativeAdapter(LabAdapter):
             raise RuntimeError(f"could not probe LAB native dependencies: {exc}") from exc
         if r.returncode != 0:
             raise RuntimeError(
-                "LAB native document/judge dependencies are incomplete; "
-                "rerun harness2-setup lab"
+                "LAB native judge dependencies are incomplete; rerun harness2-setup lab"
             )
 
 
