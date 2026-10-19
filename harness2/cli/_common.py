@@ -48,12 +48,15 @@ def make_adapter(
     """The one place a CLI turns (--bench, --subset, --substrate) into an adapter."""
     if bench not in BENCHES:
         raise ValueError(f"unknown bench {bench!r}; expected one of {BENCHES}")
-    substrate = normalize_substrate(substrate)
+    substrate = ensure_benchmark_support(bench, normalize_substrate(substrate))
 
     if bench == "wb":
-        ensure_benchmark_support("wb", substrate)
         if subset not in WB_SUBSETS:
             raise ValueError(f"--bench wb needs --subset from {WB_SUBSETS}, got {subset!r} ")
+        if substrate in ("cc", "ag"):
+            from ..benchmarks.workbuddy_native import WbNativeAdapter
+
+            return WbNativeAdapter(subset, substrate=substrate, split_file=split_file)
         from ..benchmarks.workbuddy import WbAdapter
 
         return WbAdapter(subset, substrate=substrate, split_file=split_file)
@@ -70,7 +73,10 @@ def make_adapter(
 
         return JobBenchAdapter(substrate=substrate, split_file=split_file)
 
-    ensure_benchmark_support("lab", substrate)
+    if substrate in ("cc", "ag"):
+        from ..benchmarks.lab_native import LabNativeAdapter
+
+        return LabNativeAdapter(substrate=substrate, split_file=split_file)
     from ..benchmarks.lab import LabAdapter
 
     return LabAdapter(substrate=substrate, split_file=split_file)
@@ -115,7 +121,7 @@ def add_cell_args(p: argparse._ActionsContainer) -> None:
         choices=SUBSTRATES,
         help=(
             "task-executor substrate: oc (OpenCode) | cx (Codex) | cc (Claude Code) | "
-            "ag (Antigravity); cc/ag currently have native JobBench runners"
+            "ag (Antigravity)"
         ),
     )
 

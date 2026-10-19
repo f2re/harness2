@@ -1,0 +1,7 @@
+# Version 1 is the Harness² WorkBuddy integration contract. The mount build logs
+# the concrete agy version installed from Google's official CLI distribution.
+harness:
+  params:
+    AGY_BIN_DIR: "/opt/antigravity/bin"
+    AGY_EFFORT: "high"
+    AGY_PRINT_TIMEOUT: "60m"

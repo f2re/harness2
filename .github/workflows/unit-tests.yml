@@ -5,7 +5,6 @@ on:
   push:
     branches:
       - main
-      - feature/claude-antigravity-substrates
 
 jobs:
   test:
@@ -15,11 +14,65 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install package and lint tool
+      - name: Install package and validation tools
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e . ruff
+          python -m pip install -e . ruff pyyaml build
       - name: Ruff
-        run: ruff check harness2 tests
+        id: ruff
+        run: >-
+          ruff check harness2 tests scripts/native_asset_hashes.py
+          scripts/check_provenance.py 2>&1 | tee ruff.log
+      - name: Upload Ruff diagnostics
+        if: failure() && steps.ruff.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ruff-diagnostics
+          path: ruff.log
       - name: Unit tests
-        run: python -m unittest discover -s tests -p 'test_*.py' -v
+        id: unittest
+        if: always()
+        run: python -m unittest discover -s tests -p 'test_*.py' -v 2>&1 | tee unittest.log
+      - name: Upload unittest diagnostics
+        if: failure() && steps.unittest.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: unittest-diagnostics
+          path: unittest.log
+      - name: Compile WorkBuddy Python overlays
+        if: always()
+        run: >-
+          python -m py_compile
+          third_party/wb_runner/agents/*.py
+          third_party/wb_runner/runner/*.py
+      - name: Parse WorkBuddy harness manifests
+        if: always()
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import yaml
+          for path in sorted(Path('third_party/wb_runner/configs/harnesses').rglob('*.yaml')):
+              yaml.safe_load(path.read_text())
+              print(path)
+          PY
+      - name: Verify third-party provenance
+        if: always()
+        run: python scripts/check_provenance.py
+      - name: Build and inspect source distribution
+        if: always()
+        run: |
+          python -m build --sdist
+          tar -tf dist/harness2-*.tar.gz > sdist-files.txt
+          grep -q '/third_party/wb_runner/agents/agy_harness_agent.py$' sdist-files.txt
+          grep -q '/third_party/wb_runner/agents/claude_harness_agent.py$' sdist-files.txt
+          grep -q '/dependencies/ASSETS.json$' sdist-files.txt
+          grep -q '/docs/NATIVE_SUBSTRATES.md$' sdist-files.txt
+      - name: Generate WorkBuddy asset hashes
+        if: always()
+        run: python scripts/native_asset_hashes.py > native-assets.json
+      - name: Upload WorkBuddy asset hashes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-assets-sha256
+          path: native-assets.json

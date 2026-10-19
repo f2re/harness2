@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Verify the release's runner and patch files against dependencies/ASSETS.json."""
+"""Verify bundled third-party runners and patches against ASSETS.json."""
 
 import hashlib
 import json
@@ -28,14 +28,29 @@ def main():
         for name, digest in expected.items():
             path = root / name
             if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != digest:
-                failures.append(name)
+                failures.append(f"changed or missing: {name}")
+
+        # WorkBuddy runner assets are copied into the pinned checkout during setup.
+        # A new unlisted overlay would otherwise evade a hash-only manifest check.
+        wb_root = root / "third_party" / "wb_runner"
+        shipped = {
+            path.relative_to(root).as_posix()
+            for path in wb_root.rglob("*")
+            if path.is_file() and "__pycache__" not in path.parts and path.suffix != ".pyc"
+        }
+        declared = {name for name in expected if name.startswith("third_party/wb_runner/")}
+        failures.extend(f"unlisted: {name}" for name in sorted(shipped - declared))
+        failures.extend(
+            f"manifest entry has no shipped WorkBuddy asset: {name}"
+            for name in sorted(declared - shipped)
+        )
     except (OSError, ValueError) as exc:
         print(f"Provenance check failed: {exc}")
         return 1
     if failures:
-        print("Changed or missing release assets: " + ", ".join(failures))
+        print("Provenance failures:\n  " + "\n  ".join(failures))
         return 1
-    print(f"PASS: {len(expected)} release asset checksums")
+    print(f"PASS: {len(expected)} release asset checksums; WorkBuddy manifest is complete")
     return 0
 
 

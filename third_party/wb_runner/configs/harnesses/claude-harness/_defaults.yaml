@@ -1,0 +1,15 @@
+# Harness² adaptive wrapper around WorkBuddy's pinned Claude Code agent.
+harness:
+  name: claude-harness
+  import_path: "workbuddy_bench.agents.claude_harness_agent:ClaudeHarnessAgent"
+  protocol: anthropic
+  params:
+    CLAUDE_CODE_MAX_TURNS: 256
+  mount:
+    name: claude-code
+    path: /opt/claude-code
+    dockerfile: configs/harnesses/claude-code/docker/Dockerfile
+    context: configs/harnesses/claude-code/docker
+    build:
+      args:
+        MOUNT_PATH: /opt/claude-code

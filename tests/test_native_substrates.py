@@ -12,11 +12,14 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 
+from harness2.benchmarks.lab_native import LabNativeAdapter
+from harness2.benchmarks.workbuddy import SUBSETS
+from harness2.benchmarks.workbuddy_native import WbNativeAdapter, _harness_slug, _native_job_yaml
 from harness2.core import prompts
 from harness2.core import tree as HT
 from harness2.substrate.antigravity import ANTIGRAVITY_SURFACE, AntigravitySubstrate
 from harness2.substrate.claude import CLAUDE_SURFACE, ClaudeSubstrate
-from harness2.substrate.registry import capabilities, normalize_substrate
+from harness2.substrate.registry import BENCHMARK_SUBSTRATES, SUBSTRATES, capabilities, normalize_substrate
 
 
 def _tree(surface, root):
@@ -189,13 +192,51 @@ class NativeSubstrateTests(unittest.TestCase):
         self.assertIn("[OBSERVATION]", rendered)
         self.assertIn("[ASSISTANT] Done", rendered)
 
-    def test_registry_aliases_and_capabilities(self):
+    def test_registry_aliases_capabilities_and_full_matrix(self):
         self.assertEqual(normalize_substrate("claude"), "cc")
         self.assertEqual(normalize_substrate("claude-code"), "cc")
         self.assertEqual(normalize_substrate("agy"), "ag")
         self.assertEqual(normalize_substrate("antigravity"), "ag")
         self.assertTrue(capabilities("cc").skills)
         self.assertTrue(capabilities("ag").subagents)
+        for benchmark in ("jb", "lab", "wb"):
+            self.assertEqual(BENCHMARK_SUBSTRATES[benchmark], SUBSTRATES)
+
+    def test_lab_native_adapters_keep_benchmark_contract(self):
+        cc = LabNativeAdapter(substrate="cc")
+        ag = LabNativeAdapter(substrate="ag")
+        self.assertEqual(cc.substrate.name, "cc")
+        self.assertEqual(ag.substrate.name, "ag")
+        self.assertEqual(cc.spec.install_mode, "claude_root")
+        self.assertEqual(ag.spec.install_mode, "antigravity_root")
+        self.assertTrue(cc.spec.allow_subagents)
+        self.assertTrue(ag.spec.allow_subagents)
+
+    def test_workbuddy_native_job_contracts(self):
+        subset = SUBSETS["code"]
+        cc = _native_job_yaml(
+            subset, "cc", "label", ["task-one"], self.root / "cc-ws", 2, self.root / "jobs"
+        )
+        self.assertIn(f"harness: {_harness_slug('cc')}", cc)
+        self.assertIn("model_connection: local_proxy", cc)
+        self.assertIn("WB_HARNESS_WS", cc)
+        self.assertNotIn("GEMINI_API_KEY", cc)
+
+        ag = _native_job_yaml(
+            subset, "ag", "label", ["task-one"], self.root / "ag-ws", 1, self.root / "jobs"
+        )
+        self.assertIn(f"harness: {_harness_slug('ag')}", ag)
+        self.assertIn("GEMINI_API_KEY", ag)
+        self.assertIn("generativelanguage.googleapis.com", ag)
+        self.assertNotIn("type: bind", ag)
+
+    def test_workbuddy_native_adapters_use_portable_install_modes(self):
+        cc = WbNativeAdapter("code", substrate="cc")
+        ag = WbNativeAdapter("code", substrate="ag")
+        self.assertEqual(cc.spec.install_mode, "claude_root")
+        self.assertEqual(ag.spec.install_mode, "antigravity_root")
+        self.assertEqual(cc.trajectory_path(self.root).name, "cc-output.txt")
+        self.assertEqual(ag.trajectory_path(self.root).name, "agy-output.jsonl")
 
 
 if __name__ == "__main__":

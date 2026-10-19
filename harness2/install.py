@@ -38,6 +38,12 @@ RUNNERS = (
     "jb_runner/run_benchmark_codex_cli_adapt.sh",
     "lab_runner/opencode/run_opencode.py",
     "wb_runner/agents/oc_agent.py",
+    "wb_runner/agents/claude_harness_agent.py",
+    "wb_runner/agents/agy_harness_agent.py",
+    "wb_runner/configs/harnesses/claude-harness/versions/2.1.187.yaml",
+    "wb_runner/configs/harnesses/antigravity-harness/versions/1.yaml",
+    "wb_runner/configs/harnesses/antigravity-harness/docker/Dockerfile",
+    "wb_runner/runner/harness_adapters.py",
 )
 
 
@@ -136,6 +142,7 @@ def overlays(name: str, *, dry_run=False):
         pairs = [
             (assets / "wb_runner" / "agents", repo / "src" / "workbuddy_bench" / "agents"),
             (assets / "wb_runner" / "configs" / "harnesses", repo / "configs" / "harnesses"),
+            (assets / "wb_runner" / "runner", repo / "src" / "workbuddy_bench" / "runner"),
         ]
     for source, dest in pairs:
         print(f"Copy runner assets: {source} -> {dest}", flush=True)
@@ -186,7 +193,6 @@ def workbuddy_models(*, dry_run=False):
         print(f"Configure WorkBuddy {role}: {model}", flush=True)
         if not dry_run:
             path.parent.mkdir(parents=True, exist_ok=True)
-
             path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
 

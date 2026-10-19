@@ -1,8 +1,9 @@
 # Setup guide
 
 Start with the [quick start](../README.md#install). This guide covers benchmark
-dependencies, model credentials, and the optional Codex executor. For individual
-benchmarks, see the [benchmark guides](BENCHMARKS.md).
+dependencies, model credentials, and all four executor substrates. For individual
+benchmarks, see the [benchmark guides](BENCHMARKS.md). Native Claude Code and
+Antigravity details are collected in [NATIVE_SUBSTRATES.md](NATIVE_SUBSTRATES.md).
 
 ## Requirements
 
@@ -25,6 +26,10 @@ Pandoc and Poppler are needed by LAB. Also install:
 Benchmark setup installs its own pinned Bun runtime under `dependencies/`.
 Keep the main Harness² environment active when running the commands below.
 
+For host-side Claude Code (`cc`) or Antigravity (`ag`) JobBench/LAB runs, also
+install the corresponding CLI. WorkBuddy builds Linux CLI split-mount images and
+does not rely on the host CLI executable.
+
 ## Models and credentials
 
 Copy `.env.example` to `.env` if you have not already done so. Set your Vertex AI
@@ -40,9 +45,13 @@ to `global`. Your account must have access to each configured model.
 
 | Setting | Meaning |
 |---|---|
-| `HARNESS2_SOLVER_MODEL` | Executor model in OpenCode's `provider/model` format |
-| `HARNESS2_IMPROVER_MODEL` | Improver model in the same format; defaults to the executor |
-| `HARNESS2_JUDGE_MODEL` | Bare judge model ID; the adapter supplies the Vertex prefix |
+| `HARNESS2_SOLVER_MODEL` | OpenCode executor model in `provider/model` format; also the WorkBuddy model-proxy route |
+| `HARNESS2_IMPROVER_MODEL` | Improver model in OpenCode format; defaults to the OpenCode executor |
+| `HARNESS2_JUDGE_MODEL` | Bare judge model ID; the adapter supplies the Vertex prefix where required |
+| `HARNESS2_CLAUDE_MODEL` | Optional host Claude Code solver model for JobBench/LAB |
+| `HARNESS2_ANTIGRAVITY_MODEL` | Optional Antigravity solver model |
+| `HARNESS2_ANTIGRAVITY_API_KEY` | WorkBuddy Antigravity Gemini API key; falls back to `GEMINI_API_KEY` |
+| `HARNESS2_ANTIGRAVITY_BASE_URL` | Optional Gemini-compatible Antigravity endpoint |
 | `HARNESS2_RUNS_DIR` | Output root; defaults to `runs/` |
 
 The provided configuration uses Vertex Gemini executors and judges, and supports
@@ -67,20 +76,31 @@ route: the installation check runs
 
 ## Benchmark installation
 
-Install only the benchmark you intend to run:
+Install only the benchmark/substrate cells you intend to run:
 
 ```bash
-harness2-setup lab
-harness2-check --bench lab
+harness2-setup lab --substrate oc
+harness2-check --bench lab --substrate oc
+
+harness2-setup lab --substrate cc
+harness2-check --bench lab --substrate cc
 ```
 
-Use `jb` for JobBench or `wb` for WorkBuddy-Bench. See the
-[benchmark guides](BENCHMARKS.md) for subset selection and licensing.
+Use `jb` for JobBench or `wb` for WorkBuddy-Bench. Executor tokens are:
+
+- `oc` — OpenCode (default)
+- `cx` — Codex
+- `cc` — Claude Code
+- `ag` — Antigravity
+
+All four are supported by JobBench, LAB, and WorkBuddy. WorkBuddy additionally
+requires `--subset office|web|code` for check/run/judge/report; setup can omit
+`--subset` to install all three datasets.
 
 The runner overlays and compatibility patches are included in
 [`third_party/`](../third_party/README.md). Setup clones supported upstream
 revisions under `dependencies/`, applies the patches, creates the benchmark
-environments, and downloads task data.
+environments, copies release-owned runner overlays, and downloads task data.
 
 Each benchmark environment lives inside its upstream checkout:
 
@@ -94,9 +114,9 @@ main commands.
 ### Installation checks
 
 `harness2-setup <bench> --dry-run` previews setup without making changes.
-`harness2-check` checks installed dependencies, credentials, and configuration
-without calling a model. Refinement runs perform the same checks, including
-judge configuration, before starting.
+`harness2-check` checks installed dependencies, credentials, native CLI/container
+configuration, and derived runner files without calling a model. Refinement runs
+perform the same checks, including judge configuration, before starting.
 
 These checks do not test model availability. Access to an executor, improver, or
 judge model is tested when that model is first called. Refinement and judging
@@ -137,8 +157,46 @@ To use another Responses API endpoint, set `HARNESS2_CODEX_BASE_URL`,
 endpoint and model in `dependencies/codex/home/config.toml`; rerun setup after
 changing either. `harness2-check` reports stale configuration until then.
 
-Codex runs with its sandbox disabled. Review the
-[executor network restrictions](EXPERIMENTS.md#web-access) before evaluation.
+## Claude Code executor
+
+For JobBench and LAB, install and authenticate Claude Code normally. Harness²
+uses `claude` on `PATH`, or the executable named by `HARNESS2_CLAUDE_BIN`.
+`HARNESS2_CLAUDE_MODEL` is optional; when empty, Claude Code uses its configured
+default model.
+
+```bash
+harness2-setup jb --substrate cc
+harness2-check --bench jb --substrate cc
+harness2 --bench jb --substrate cc --k 1 --mode parallel --max-tasks 1
+```
+
+WorkBuddy does not depend on the host Claude installation. Setup builds the
+pinned Claude Code `2.1.187` split-mount image and runs the benchmark's `CcAgent`
+through its local Anthropic-compatible model proxy. Therefore WorkBuddy's actual
+Claude backend is the `HARNESS2_SOLVER_MODEL` route.
+
+## Antigravity executor
+
+For JobBench and LAB, install Google's Antigravity CLI (`agy`) and authenticate
+it normally. Harness² uses `agy` on `PATH`, or
+`HARNESS2_ANTIGRAVITY_BIN`. `HARNESS2_ANTIGRAVITY_MODEL` is optional.
+
+```bash
+harness2-setup lab --substrate ag
+harness2-check --bench lab --substrate ag
+harness2 --bench lab --substrate ag --k 1 --mode parallel --max-tasks 1
+```
+
+Native headless runs use streaming JSON, `--effort high`, autonomous benchmark
+permissions, and an explicit print timeout matching the Harness² rollout budget.
+
+WorkBuddy builds a Linux Antigravity split-mount image and cannot use an
+interactive desktop keyring. Set `HARNESS2_ANTIGRAVITY_API_KEY` (or
+`GEMINI_API_KEY`) for this cell. An optional custom Gemini-compatible endpoint
+can be supplied with `HARNESS2_ANTIGRAVITY_BASE_URL`.
+
+See [NATIVE_SUBSTRATES.md](NATIVE_SUBSTRATES.md) for the portable Harness IR,
+container contracts, and reproducibility boundary of the Antigravity installer.
 
 ## Network access during setup
 
@@ -147,9 +205,10 @@ Setup downloads dependencies from the following hosts:
 | Host | Used for |
 |---|---|
 | `github.com` | Pinned upstream checkouts |
-| `registry.npmjs.org` | Pinned Bun runtime and Codex CLI, plus dependencies resolved by `bun install` |
+| `registry.npmjs.org` | Pinned Bun runtime and Codex/Claude-related package builds |
+| `antigravity.google` | WorkBuddy Antigravity split-mount build |
 | `huggingface.co` and its CDN | JobBench data and WorkBuddy subset archives |
-| A Docker registry | WorkBuddy container image |
+| A Docker registry | WorkBuddy container and split-mount base images |
 | `astral.sh` | CPython 3.12 when the host has no system Python 3.12 |
 
 Use `harness2-setup <bench> --dry-run` to review setup commands when configuring
@@ -160,6 +219,7 @@ see [web access during evaluation](EXPERIMENTS.md#web-access).
 ## Wheel installations
 
 A wheel ships the `harness2` package only. The task partitioner,
-`python scripts/split_tasks.py`, requires this source tree. For a wheel
-installation, work from a dedicated directory: `.env`, `dependencies/`, and
-`runs/` are resolved there.
+`python scripts/split_tasks.py`, requires this source tree. The benchmark runner
+overlays under `third_party/` are also source-release assets; benchmark setup is
+therefore intended from a source checkout. For a wheel-only installation, use
+the demo/package APIs or work from a source release containing those assets.

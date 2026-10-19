@@ -44,8 +44,11 @@ harnesses, with gains of up to 11.5 points on WorkBuddy-Bench, 4.5 points on
 JobBench, and 11.8 percentage points on LAB's partial pass rate. Increasing the
 task-level recursion budget brings further gains.
 
-The release supports **parallel and sequential recursion**, **OpenCode and
-Codex executors**, and **JobBench, LAB, and WorkBuddy-Bench**.
+The release supports **parallel and sequential recursion**, **OpenCode, Codex,
+Claude Code, and Antigravity executors**, and **JobBench, LAB, and
+WorkBuddy-Bench**. Native Claude/Antigravity integration uses one portable
+Codex-shaped Harness IR and compiles it to each runtime immediately before a
+rollout; see [native substrate documentation](docs/NATIVE_SUBSTRATES.md).
 
 ## Video overview
 
@@ -99,12 +102,14 @@ Poppler; WorkBuddy-Bench needs Docker. Then configure your models:
 
 ```bash
 cp .env.example .env
-# Edit .env with your Vertex AI project and model IDs.
+# Edit .env with your project/model IDs and any native-CLI settings you use.
 gcloud auth application-default login
 ```
 
-See the [setup guide](docs/SETUP.md) for model settings, authentication
-alternatives, and the [Codex executor](docs/SETUP.md#codex-executor).
+See the [setup guide](docs/SETUP.md) for model settings and authentication, the
+[benchmark guide](docs/BENCHMARKS.md) for each task suite, and
+[NATIVE_SUBSTRATES.md](docs/NATIVE_SUBSTRATES.md) for Claude Code / Antigravity
+host and WorkBuddy-container details.
 
 ## Run a benchmark
 
@@ -112,12 +117,12 @@ The following example installs LAB and runs one task, then evaluates and reports
 its result. Model-backed runs incur API costs; start with a small task selection.
 
 ```bash
-harness2-setup lab
-harness2-check --bench lab
-harness2 --bench lab --k 1 --mode parallel \
+harness2-setup lab --substrate cc
+harness2-check --bench lab --substrate cc
+harness2 --bench lab --substrate cc --k 1 --mode parallel \
   --only-domains antitrust-competition --max-tasks 1
-harness2-judge --bench lab --k 1 --mode parallel
-harness2-report --bench lab --k 1 --mode parallel
+harness2-judge --bench lab --substrate cc --k 1 --mode parallel
+harness2-report --bench lab --substrate cc --k 1 --mode parallel
 ```
 
 Sequential recursion runs the same commands with `--mode sequential`. `--k` is
@@ -128,14 +133,14 @@ selection without model calls.
 
 | Benchmark | Tasks | Install | Guide |
 |---|---|---|---|
-| JobBench | Professional work | `harness2-setup jb` | [JobBench](docs/BENCHMARKS.md#jobbench) |
-| LAB | Legal work | `harness2-setup lab` | [LAB](docs/BENCHMARKS.md#lab) |
-| WorkBuddy-Bench | Office, web, and code | `harness2-setup wb` | [WorkBuddy](docs/BENCHMARKS.md#workbuddy-bench) |
+| JobBench | Professional work | `harness2-setup jb --substrate <oc|cx|cc|ag>` | [JobBench](docs/BENCHMARKS.md#jobbench) |
+| LAB | Legal work | `harness2-setup lab --substrate <oc|cx|cc|ag>` | [LAB](docs/BENCHMARKS.md#lab) |
+| WorkBuddy-Bench | Office, web, and code | `harness2-setup wb --substrate <oc|cx|cc|ag>` | [WorkBuddy](docs/BENCHMARKS.md#workbuddy-bench) |
 
 Choose one benchmark per command. WorkBuddy also takes `--subset office`,
 `--subset web`, or `--subset code` on every command after setup. The
-[benchmark guides](docs/BENCHMARKS.md) cover each one's data, domains, and
-grading.
+[benchmark guides](docs/BENCHMARKS.md) cover each one's data, domains, grading,
+and substrate-specific runtime behavior.
 
 ## Experiments
 
@@ -156,7 +161,10 @@ through successive Propose–Probe–Compose steps.
 | `--k 1` | One Propose–Probe–Compose step |
 | `--k K --mode parallel` | Probe `K` general and `K` domain-specific candidates, then produce `K` compositions |
 | `--k K --mode sequential` | Refine the harness through `K` successive steps |
-| `--substrate cx` | Use Codex instead of the default OpenCode executor |
+| `--substrate oc` | OpenCode executor (default) |
+| `--substrate cx` | Codex executor |
+| `--substrate cc` | Claude Code executor |
+| `--substrate ag` | Antigravity executor |
 
 After each task, harnessing-level recursion retains the adopted harness and
 evidence-supported lessons to guide future refinement. See the
@@ -165,20 +173,22 @@ reproducibility, and baseline comparisons.
 
 ## Web access
 
-Executor network access is unrestricted, and Codex runs with its sandbox
-disabled. Public benchmark rubrics may be accessible online. Before evaluation,
-configure [network restrictions](docs/EXPERIMENTS.md#web-access) to prevent
-access to benchmark answers and grading criteria.
+Executor network access depends on the substrate/runtime, and autonomous native
+benchmark runs use non-interactive permission modes. Public benchmark rubrics may
+be accessible online. Before evaluation, configure
+[network restrictions](docs/EXPERIMENTS.md#web-access) to prevent access to
+benchmark answers and grading criteria.
 
 ## Results and resume
 
-Results are saved under `runs/`, organized by benchmark and subset where
-applicable. They include task summaries, deliverables, adopted harnesses,
-reflection notes, and evaluation results.
+Results are saved under `runs/`, organized by benchmark, substrate, and subset
+where applicable. They include task summaries, deliverables, adopted harnesses,
+reflection notes, trajectories, and evaluation results.
 
 Repeat the same command to resume. Use a new `HARNESS2_RUNS_DIR` when changing
-models or task selection. See [results and resume](docs/EXPERIMENTS.md#results-and-resume)
-for details; each command also supports `--help`.
+models, substrate configuration, or task selection. See
+[results and resume](docs/EXPERIMENTS.md#results-and-resume) for details; each
+command also supports `--help`.
 
 ## Citation
 
@@ -200,8 +210,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Harness² is licensed under [Apache 2.0](LICENSE). Third-party code under
 [`third_party/`](third_party/README.md), benchmarks, and datasets retain their
-upstream licenses; see
-[third-party notices](dependencies/README.md).
+upstream licenses; see [third-party notices](dependencies/README.md).
 
 ## Disclaimer
 

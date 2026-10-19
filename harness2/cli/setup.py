@@ -38,8 +38,6 @@ def main(argv=None):
     args = p.parse_args(argv)
     if args.subset and args.benchmark != "wb":
         p.error("--subset only applies to wb")
-    if args.substrate in ("cc", "ag") and args.benchmark != "jb":
-        p.error("Claude Code and Antigravity currently have a native runner for JobBench only")
     dry = args.dry_run
     missing = install.missing_runners()
     if missing and not dry:
@@ -54,6 +52,8 @@ def main(argv=None):
             ):
                 if not shutil.which(binary):
                     raise RuntimeError(f"Missing {binary}; see README.md")
+            # Native host CLI presence is checked by substrate preflight after
+            # setup, where HARNESS2_CLAUDE_BIN / HARNESS2_ANTIGRAVITY_BIN are honored.
         install.clone("opencode", dry_run=dry)
         install.patch("opencode", dry_run=dry)
         install.run(
@@ -93,7 +93,12 @@ def main(argv=None):
             install.run(
                 ["bash", "scripts/dataset/fetch-dataset.sh", *subsets], cwd=repo, dry_run=dry
             )
-            if args.substrate == "oc":
+            mount = {
+                "oc": f"opencode/{config.WB_OC_HARNESS_VER}",
+                "cc": f"claude-harness/{config.WB_CC_HARNESS_VER}",
+                "ag": f"antigravity-harness/{config.WB_AG_HARNESS_VER}",
+            }.get(args.substrate)
+            if mount:
                 install.run(
                     [
                         "uv",
@@ -102,7 +107,7 @@ def main(argv=None):
                         "bash",
                         "scripts/harness/build-harness-mounts.sh",
                         "--harness",
-                        "opencode/1.14.18",
+                        mount,
                     ],
                     cwd=repo,
                     dry_run=dry,

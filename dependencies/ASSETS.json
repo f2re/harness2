@@ -32,11 +32,18 @@
   "third_party/patches/opencode-compat.diff": "c9a8a0e826d48f3fcfc7d818321d128c28e1f7f7c594954c19453dfca4946dc8",
   "third_party/patches/workbuddy-bench-runtime.diff": "1d581ee0c23a9a5574ce0f9317d0bda17f6c3a2556898c89b34ccbdbd5b87b3f",
   "third_party/wb_runner/LICENSE": "b466fc7a63acc5cac4275fc4b0f1e22f332ad188ea600b217076ea3a8e040956",
-  "third_party/wb_runner/PROVENANCE.md": "9011685c8808fb6ab56d23c823af884e5905caecd00f64323f3d02f22e45524c",
+  "third_party/wb_runner/PROVENANCE.md": "572ea0f69cb64b5339769b3da4a640c5077b31e417eb9d2603ddb10447054644",
+  "third_party/wb_runner/agents/agy_harness_agent.py": "4c885f3ecffe1b7f097ed3ade08f03e0d092e7a12f9f7a45b8e10999f3e2182f",
+  "third_party/wb_runner/agents/claude_harness_agent.py": "95c0d3c92dda15ebd4350aac0f6639b62b8a92ed3458be14da6109568b62180d",
   "third_party/wb_runner/agents/codex_agent.py": "dbdf48c19c51d7a0389caf3f5601c1ff967ef534137d829afe8ca8792db40c9d",
   "third_party/wb_runner/agents/codex_harness_agent.py": "fc1d1ecfc2de1debabb0ff84ec7a113b05536873ac76f73806835ff873b2f580",
   "third_party/wb_runner/agents/oc_agent.py": "5375a49b9a9e6d6d6212b47156b36dca17934e54728ddeed6218ac3662c67fff",
   "third_party/wb_runner/agents/oc_harness_agent.py": "647e31187af1305a5ddc42f7e41740795f825e0c708f63f5d1f29b954625c09c",
+  "third_party/wb_runner/configs/harnesses/antigravity-harness/_defaults.yaml": "238ab0cb12bd2790bc4dde3165b5d44f84a2ada8596bb35d948ca920ef8c1b6e",
+  "third_party/wb_runner/configs/harnesses/antigravity-harness/docker/Dockerfile": "8b7b8e193109117855fea16447535d57596ec76f4ff29bb896ee23924c765d18",
+  "third_party/wb_runner/configs/harnesses/antigravity-harness/versions/1.yaml": "c2eb04da1a77118c33f9293a916f4c0f821efa5c7a37588d6a598238145d9d52",
+  "third_party/wb_runner/configs/harnesses/claude-harness/_defaults.yaml": "4dcf1ac03070748768260e40e4efba0a16fd911783e8a6e898b3f79aded07de1",
+  "third_party/wb_runner/configs/harnesses/claude-harness/versions/2.1.187.yaml": "7a3eb9d247190fa0dada5d3edd986eb79558a53ea33b27b24ec4260c716081be",
   "third_party/wb_runner/configs/harnesses/codex-harness/_defaults.yaml": "5dddd5c358eff75ca69f7277ae6ccd58a2e208e19d722b862f04062a3718479e",
   "third_party/wb_runner/configs/harnesses/codex-harness/versions/0.144.6.yaml": "f6ebdc457786c3869ceb8a11ee0c4a63db53a080961075c15edff2a7640293bf",
   "third_party/wb_runner/configs/harnesses/oc-harness/_defaults.yaml": "418843868dc1b01431b339791ae63bb23c88cad3238bf9ab844fbefae8acd71e",
@@ -45,5 +52,6 @@
   "third_party/wb_runner/configs/harnesses/opencode/_defaults.yaml": "0ff808c61e7d0a0f4709d86fe6ed0457cb47a1401e754a18500eaf162c03fe84",
   "third_party/wb_runner/configs/harnesses/opencode/docker/Dockerfile": "407a631ad135c6960bc319ade205efc37175999c349466b8d82e9a2aedff7266",
   "third_party/wb_runner/configs/harnesses/opencode/presets/settings/v1_14.json": "1cc19b36f9aa7a8b6a9bf84d63fed256b9e807ecc163c49c52add1c06e6bdc7b",
-  "third_party/wb_runner/configs/harnesses/opencode/versions/1.14.18.yaml": "54cb6265d12b74098aab5425425b13afba581ac4a2c0cef43ba8ce6d7c1c9767"
+  "third_party/wb_runner/configs/harnesses/opencode/versions/1.14.18.yaml": "54cb6265d12b74098aab5425425b13afba581ac4a2c0cef43ba8ce6d7c1c9767",
+  "third_party/wb_runner/runner/harness_adapters.py": "e3d15b9523a99e87d8d1505896be23a914934759e61fed46aafbde38562301ab"
 }

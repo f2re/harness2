@@ -37,8 +37,8 @@ SUBSTRATE_ALIASES = {
 SUBSTRATES = ("oc", "cx", "cc", "ag")
 BENCHMARK_SUBSTRATES = {
     "jb": SUBSTRATES,
-    "lab": ("oc", "cx"),
-    "wb": ("oc", "cx"),
+    "lab": SUBSTRATES,
+    "wb": SUBSTRATES,
 }
 
 _CLASSES = {
@@ -91,8 +91,7 @@ def ensure_benchmark_support(benchmark: str, substrate: str) -> str:
         raise ValueError(f"unknown benchmark {benchmark!r}")
     if substrate not in supported:
         raise ValueError(
-            f"{benchmark} does not yet have a benchmark-specific runner for substrate "
-            f"{substrate!r}; supported: {supported}"
+            f"{benchmark} has no runner for substrate {substrate!r}; supported: {supported}"
         )
     return substrate
 
