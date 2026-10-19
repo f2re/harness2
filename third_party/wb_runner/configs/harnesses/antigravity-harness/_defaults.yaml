@@ -1,0 +1,10 @@
+# Harness² Antigravity CLI adapter. The staged agy binary is mounted by the
+# generated job YAML at /opt/antigravity; credentials are injected at run time.
+harness:
+  name: antigravity-harness
+  import_path: "workbuddy_bench.agents.agy_harness_agent:AntigravityHarnessAgent"
+  protocol: openai
+  params:
+    AGY_BIN_DIR: "/opt/antigravity"
+    AGY_EFFORT: "high"
+    AGY_PRINT_TIMEOUT: "60m"
