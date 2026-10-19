@@ -25,6 +25,33 @@ from .install import PATCHES, missing_runners
 from .substrate.opencode import OpencodeSubstrate
 
 
+def validate_model_config(adapter, *, judge: bool = False) -> None:
+    """Validate model configuration without treating every non-OpenCode solver as Codex.
+
+    Claude Code and Antigravity authenticate and select their solver through their own
+    CLIs. Harness² still uses OpenCode for the improver, so native cells require an
+    improver model but do not require HARNESS2_SOLVER_MODEL to name the native solver.
+    """
+    substrate = adapter.substrate.name
+    if substrate in ("oc", "cx"):
+        config.validate_models(judge=judge)
+        return
+
+    if substrate not in ("cc", "ag"):
+        raise config.ConfigError(f"unknown solver substrate {substrate!r}")
+    if not config.IMPROVER_MODEL:
+        raise config.ConfigError(
+            "HARNESS2_IMPROVER_MODEL (or HARNESS2_SOLVER_MODEL as its fallback) is required "
+            "for Harness² proposer/composer sessions"
+        )
+    if "/" not in config.IMPROVER_MODEL:
+        raise config.ConfigError("Improver model must use OpenCode's provider/model syntax")
+    if config.IMPROVER_MODEL.startswith("google-vertex") and not config.VERTEX_PROJECT:
+        raise config.ConfigError("Set GOOGLE_CLOUD_PROJECT for a Vertex AI improver")
+    if judge:
+        config.require("HARNESS2_JUDGE_MODEL", needed_by="benchmark judging")
+
+
 def check(adapter, *, judge=False) -> list[str]:
     missing = missing_runners()
     if missing:
@@ -44,7 +71,7 @@ def check(adapter, *, judge=False) -> list[str]:
             return False
 
     for validate in (
-        lambda: config.validate_models(judge=judge),
+        lambda: validate_model_config(adapter, judge=judge),
         adapter.tasks,
         OpencodeSubstrate().preflight,
         adapter.preflight,

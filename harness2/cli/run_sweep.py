@@ -26,14 +26,15 @@ judge model must be named and a benchmark that grades in its own environment mus
 installed — so it catches an unset or unbuilt judge, not one an account cannot serve.
 
     python3 -m harness2.cli.run_sweep --bench jb --substrate oc --k 2 --split all
-    python3 -m harness2.cli.run_sweep --bench wb --subset web --substrate cx \\
-        --k 1 --split all --seed 7 --modes parallel --max-tasks 2 --dry-run
+    python3 -m harness2.cli.run_sweep --bench jb --substrate cc --k 1 --max-tasks 1
+    python3 -m harness2.cli.run_sweep --bench jb --substrate ag --k 1 --max-tasks 1
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -206,17 +207,31 @@ def _main(args: argparse.Namespace) -> int:
     return 2 if failed else 0
 
 
+def _executor_identity(adapter, substrate: str) -> tuple[str, str]:
+    """Return (model, endpoint) without collapsing every non-OpenCode runner into Codex."""
+    if substrate == "oc":
+        return config.SOLVER_MODEL_OC, ""
+    if substrate == "cx":
+        return config.SOLVER_MODEL_CX, config.CODEX_BASE_URL
+    if substrate == "cc":
+        return str(getattr(adapter, "model", "")), os.environ.get("ANTHROPIC_BASE_URL", "")
+    if substrate == "ag":
+        return str(getattr(adapter, "model", "")), ""
+    raise ValueError(f"unknown substrate {substrate!r}")
+
+
 def _check_identity(adapter, args, namespace_dir: Path) -> None:
     """Prevent a resumed run or library from silently mixing models or task partitions."""
+    executor, endpoint = _executor_identity(adapter, args.substrate)
     identity = {
         "method_version": config.METHOD_VERSION,
-        "executor": config.SOLVER_MODEL_OC if args.substrate == "oc" else config.SOLVER_MODEL_CX,
+        "executor": executor,
         "improver": config.IMPROVER_MODEL,
         "judge": config.JUDGE_MODEL,
         "project": config.VERTEX_PROJECT,
         "location": config.VERTEX_REGION,
         "judge_endpoint": config.JB_JUDGE_API_BASE,
-        "endpoint": config.CODEX_BASE_URL if args.substrate == "cx" else "",
+        "endpoint": endpoint,
         "split": args.split,
         "tasks": _stream_for(adapter, args)[1],
         "max_tasks": args.max_tasks,

@@ -21,6 +21,7 @@ import shutil
 import subprocess
 
 from harness2 import config, install
+from harness2.substrate.registry import SUBSTRATES
 
 
 def main(argv=None):
@@ -32,11 +33,13 @@ def main(argv=None):
         default=None,
         help="wb only: one subset to install; omitted installs office, web, and code",
     )
-    p.add_argument("--substrate", choices=("oc", "cx"), default="oc")
+    p.add_argument("--substrate", choices=SUBSTRATES, default="oc")
     p.add_argument("--dry-run", action="store_true")
     args = p.parse_args(argv)
     if args.subset and args.benchmark != "wb":
         p.error("--subset only applies to wb")
+    if args.substrate in ("cc", "ag") and args.benchmark != "jb":
+        p.error("Claude Code and Antigravity currently have a native runner for JobBench only")
     dry = args.dry_run
     missing = install.missing_runners()
     if missing and not dry:
