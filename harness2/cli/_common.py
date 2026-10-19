@@ -26,10 +26,10 @@ from pathlib import Path
 from ..core import library as LIB
 from ..core import schedule as SCHED
 from ..core.spec import BenchmarkAdapter
+from ..substrate.registry import SUBSTRATES, ensure_benchmark_support, normalize_substrate
 
 BENCHES = ("jb", "wb", "lab")
 WB_SUBSETS = ("office", "web", "code")
-SUBSTRATES = ("oc", "cx")
 
 MODES_DEFAULT = "parallel"
 MODES_HELP = (
@@ -48,20 +48,29 @@ def make_adapter(
     """The one place a CLI turns (--bench, --subset, --substrate) into an adapter."""
     if bench not in BENCHES:
         raise ValueError(f"unknown bench {bench!r}; expected one of {BENCHES}")
-    if substrate not in SUBSTRATES:
-        raise ValueError(f"unknown substrate {substrate!r}; expected one of {SUBSTRATES}")
+    substrate = normalize_substrate(substrate)
+
     if bench == "wb":
+        ensure_benchmark_support("wb", substrate)
         if subset not in WB_SUBSETS:
             raise ValueError(f"--bench wb needs --subset from {WB_SUBSETS}, got {subset!r} ")
         from ..benchmarks.workbuddy import WbAdapter
 
         return WbAdapter(subset, substrate=substrate, split_file=split_file)
+
     if subset:
         raise ValueError(f"--subset applies to --bench wb only, got {subset!r} for {bench}")
+
     if bench == "jb":
+        if substrate in ("cc", "ag"):
+            from ..benchmarks.jobbench_native import JobBenchNativeAdapter
+
+            return JobBenchNativeAdapter(substrate=substrate, split_file=split_file)
         from ..benchmarks.jobbench import JobBenchAdapter
 
         return JobBenchAdapter(substrate=substrate, split_file=split_file)
+
+    ensure_benchmark_support("lab", substrate)
     from ..benchmarks.lab import LabAdapter
 
     return LabAdapter(substrate=substrate, split_file=split_file)
@@ -104,7 +113,10 @@ def add_cell_args(p: argparse._ActionsContainer) -> None:
         "--substrate",
         default="oc",
         choices=SUBSTRATES,
-        help="task-executor substrate: oc (opencode) | cx (codex)",
+        help=(
+            "task-executor substrate: oc (OpenCode) | cx (Codex) | cc (Claude Code) | "
+            "ag (Antigravity); cc/ag currently have native JobBench runners"
+        ),
     )
 
 
