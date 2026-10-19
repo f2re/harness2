@@ -1,0 +1,11 @@
+harness:
+  params:
+    CLAUDE_CODE_VERSION: "2.1.187"
+  settings_file: configs/harnesses/claude-code/presets/settings/v2_1.json
+  env:
+    CLAUDE_CODE_EFFORT_LEVEL: "max"
+    CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"
+    DISABLE_AUTOUPDATER: "1"
+    DISABLE_TELEMETRY: "1"
+    DISABLE_UPDATES: "1"
+    CLAUDE_CODE_ATTRIBUTION_HEADER: "0"
