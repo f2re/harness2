@@ -1,10 +1,16 @@
-# Harness² Antigravity CLI adapter. The staged agy binary is mounted by the
-# generated job YAML at /opt/antigravity; credentials are injected at run time.
+# Harness² Antigravity CLI adapter. WorkBuddy builds the Linux CLI into a
+# read-only split-mount image so macOS/ARM hosts do not leak host architecture
+# into benchmark containers. Credentials are injected at run time.
 harness:
   name: antigravity-harness
   import_path: "workbuddy_bench.agents.agy_harness_agent:AntigravityHarnessAgent"
   protocol: openai
   params:
-    AGY_BIN_DIR: "/opt/antigravity"
+    AGY_BIN_DIR: "/opt/antigravity/bin"
     AGY_EFFORT: "high"
     AGY_PRINT_TIMEOUT: "60m"
+  mount:
+    name: antigravity
+    path: /opt/antigravity
+    dockerfile: configs/harnesses/antigravity-harness/docker/Dockerfile
+    context: configs/harnesses/antigravity-harness/docker
