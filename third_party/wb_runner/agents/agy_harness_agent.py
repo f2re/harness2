@@ -1,7 +1,7 @@
 """Antigravity CLI + Harness² workspace adapter for WorkBuddy-Bench.
 
-The CLI binary is staged by ``harness2-setup`` and bind-mounted read-only at
-``/opt/antigravity``.  Headless WorkBuddy runs use Gemini API-key authentication
+The Linux CLI comes from WorkBuddy's read-only ``antigravity`` split mount at
+``/opt/antigravity``. Headless WorkBuddy runs use Gemini API-key authentication
 rather than a desktop keyring so the container contract is deterministic.
 """
 from __future__ import annotations
@@ -25,12 +25,12 @@ _HARNESS_ENTRIES = ("AGENTS.md", ".agents", "scripts")
 
 
 class AntigravityHarnessAgent(BaseInstalledAgent):
-    """A pinned host-staged ``agy`` binary running inside the Harbor task container."""
+    """Google ``agy`` running inside the Harbor task container."""
 
     SUPPORTS_ATIF = False
 
     def __init__(self, logs_dir: Path, *args, **kwargs):
-        self._bin_dir = str(kwargs.pop("AGY_BIN_DIR", "/opt/antigravity")).rstrip("/")
+        self._bin_dir = str(kwargs.pop("AGY_BIN_DIR", "/opt/antigravity/bin")).rstrip("/")
         self._agy_model = str(kwargs.pop("AGY_MODEL", "") or "")
         self._effort = str(kwargs.pop("AGY_EFFORT", "high") or "high")
         self._print_timeout = str(kwargs.pop("AGY_PRINT_TIMEOUT", "60m") or "60m")
@@ -148,10 +148,11 @@ class AntigravityHarnessAgent(BaseInstalledAgent):
             flags += ["--effort", shlex.quote(self._effort)]
         output = f"/logs/agent/{_OUTPUT_FILENAME}"
         stderr = f"/logs/agent/{_STDERR_FILENAME}"
+        # Redirect instead of piping through tee so Harbor observes agy's real exit status.
         command = (
             'export PATH="/usr/local/bin:$PATH"; '
             'export HOME="$(getent passwd "$(id -u)" | cut -d: -f6)"; '
-            f"cd /workspace && agy {' '.join(flags)} </dev/null 2>{stderr} | tee {output}"
+            f"cd /workspace && agy {' '.join(flags)} </dev/null >{output} 2>{stderr}"
         )
         await self.exec_as_agent(environment, command=command, env=env)
 
