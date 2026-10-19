@@ -20,7 +20,7 @@ import argparse
 import shutil
 import subprocess
 
-from harness2 import config, install, native_install
+from harness2 import config, install
 from harness2.substrate.registry import SUBSTRATES
 
 
@@ -52,9 +52,8 @@ def main(argv=None):
             ):
                 if not shutil.which(binary):
                     raise RuntimeError(f"Missing {binary}; see README.md")
-            # Native host CLI presence is checked by the substrate preflight after
-            # setup. That resolver honors HARNESS2_CLAUDE_BIN / HARNESS2_ANTIGRAVITY_BIN,
-            # unlike a bare shutil.which() check here.
+            # Native host CLI presence is checked by substrate preflight after
+            # setup, where HARNESS2_CLAUDE_BIN / HARNESS2_ANTIGRAVITY_BIN are honored.
         install.clone("opencode", dry_run=dry)
         install.patch("opencode", dry_run=dry)
         install.run(
@@ -69,8 +68,6 @@ def main(argv=None):
         install.patch(name, dry_run=dry)
         install.overlays(name, dry_run=dry)
         repo = config.DEPENDENCIES / name
-        if args.benchmark == "wb":
-            native_install.workbuddy_runner_overlay(repo, dry_run=dry)
         install.run(["uv", "sync", "--locked", "--python", "3.12"], cwd=repo, dry_run=dry)
         if args.benchmark == "jb":
             install.run(
