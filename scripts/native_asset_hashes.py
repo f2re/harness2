@@ -13,7 +13,7 @@ def main() -> int:
     rows = {
         path.relative_to(root).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
         for path in sorted(base.rglob("*"))
-        if path.is_file()
+        if path.is_file() and "__pycache__" not in path.parts and path.suffix != ".pyc"
     }
     print(json.dumps(rows, indent=2, sort_keys=True))
     return 0
