@@ -26,14 +26,15 @@ from .substrate.opencode import OpencodeSubstrate
 
 
 def validate_model_config(adapter, *, judge: bool = False) -> None:
-    """Validate model configuration without treating every non-OpenCode solver as Codex.
+    """Validate models while respecting where each executor gets its model.
 
-    Claude Code and Antigravity authenticate and select their solver through their own
-    CLIs. Harness² still uses OpenCode for the improver, so native cells require an
-    improver model but do not require HARNESS2_SOLVER_MODEL to name the native solver.
+    Claude Code and Antigravity normally authenticate/select the solver through
+    their own CLIs. WorkBuddy is the exception for Claude: its pinned CcAgent
+    deliberately routes through WorkBuddy's local model proxy, so that benchmark
+    still needs the standard OpenCode-format solver route configured at setup.
     """
     substrate = adapter.substrate.name
-    if substrate in ("oc", "cx"):
+    if substrate in ("oc", "cx") or adapter.spec.name.startswith("wb-"):
         config.validate_models(judge=judge)
         return
 
@@ -154,7 +155,8 @@ def check(adapter, *, judge=False) -> list[str]:
                 repo / ".venv/bin/python",
                 "-c",
                 "import harbor; from workbuddy_bench.runner.harness_adapters import HARNESS_ADAPTERS; "
-                "assert all(k in HARNESS_ADAPTERS for k in ('opencode', 'oc-harness', 'codex-harness'))",
+                "assert all(k in HARNESS_ADAPTERS for k in "
+                "('opencode','oc-harness','codex-harness','claude-harness','antigravity-harness'))",
             ],
             cwd=repo,
         )
