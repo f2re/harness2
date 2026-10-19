@@ -120,13 +120,43 @@ def _ensure_antigravity_subagent(text: str, name: str) -> str:
     )
 
 
+_TOOL_MATCHERS = {
+    "Bash": "run_command",
+    "Read": "view_file",
+    "Write": "write_to_file",
+    "Edit": "replace_file_content",
+}
+_SUPPORTED_HOOK_EVENTS = {
+    "SessionStart",
+    "PreToolUse",
+    "PostToolUse",
+    "PreInvocation",
+    "PostInvocation",
+    "Stop",
+}
+
+
+def _translate_matcher(value) -> str:
+    """Translate common Claude/Codex tool names in simple matcher alternations."""
+    matcher = str(value or "")
+    return "|".join(_TOOL_MATCHERS.get(part, part) for part in matcher.split("|"))
+
+
 def _compile_hooks(src: str) -> str:
-    """Compile Harness² normalized hooks into Antigravity's named-hook schema."""
+    """Compile Harness² normalized hooks into Antigravity's named-hook schema.
+
+    The portable tree uses the existing Codex/Claude matcher-entry shape. Native
+    Antigravity uses named hook definitions and different canonical tool names.
+    Tool-control output semantics are runtime-specific; command side effects and
+    native event outputs remain the hook command's responsibility.
+    """
     doc = json.loads(src)
     hooks = doc.get("hooks", {}) if isinstance(doc, dict) else {}
     native: dict[str, dict] = {}
     direct_events = {"SessionStart", "PreInvocation", "PostInvocation", "Stop"}
     for event, entries in hooks.items():
+        if event not in _SUPPORTED_HOOK_EVENTS:
+            raise ValueError(f"Antigravity does not support portable hook event {event!r}")
         if not isinstance(entries, list):
             continue
         if event in direct_events:
@@ -136,7 +166,15 @@ def _compile_hooks(src: str) -> str:
                     handlers.extend(h for h in entry["hooks"] if isinstance(h, dict))
             native[f"harness2-{event.lower()}"] = {event: handlers}
         else:
-            native[f"harness2-{event.lower()}"] = {event: entries}
+            translated = []
+            for entry in entries:
+                if not isinstance(entry, dict):
+                    continue
+                item = dict(entry)
+                if "matcher" in item:
+                    item["matcher"] = _translate_matcher(item.get("matcher"))
+                translated.append(item)
+            native[f"harness2-{event.lower()}"] = {event: translated}
     return json.dumps(native, indent=2) + "\n"
 
 
