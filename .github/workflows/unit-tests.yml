@@ -14,13 +14,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install package and lint tool
+      - name: Install package and validation tools
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e . ruff
+          python -m pip install -e . ruff pyyaml
       - name: Ruff
         id: ruff
-        run: ruff check harness2 tests 2>&1 | tee ruff.log
+        run: ruff check harness2 tests scripts 2>&1 | tee ruff.log
       - name: Upload Ruff diagnostics
         if: failure() && steps.ruff.outcome == 'failure'
         uses: actions/upload-artifact@v4
@@ -37,6 +37,22 @@ jobs:
         with:
           name: unittest-diagnostics
           path: unittest.log
+      - name: Compile WorkBuddy Python overlays
+        if: always()
+        run: >-
+          python -m py_compile
+          third_party/wb_runner/agents/*.py
+          third_party/wb_runner/runner/*.py
+      - name: Parse WorkBuddy harness manifests
+        if: always()
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import yaml
+          for path in sorted(Path('third_party/wb_runner/configs/harnesses').rglob('*.yaml')):
+              yaml.safe_load(path.read_text())
+              print(path)
+          PY
       - name: Generate WorkBuddy asset hashes
         if: always()
         run: python scripts/native_asset_hashes.py > native-assets.json
