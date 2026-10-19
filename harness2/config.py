@@ -83,7 +83,7 @@ def require(name: str, *, needed_by: str) -> str:
     v = env(name)
     if not v:
         raise ConfigError(
-            f"{name} is required for {needed_by}; set it in .env or the shell (see .env.example)"
+            f"{name} is required for {needed_by}; set it in .env or the shell (see docs)"
         )
     return str(v)
 
@@ -98,6 +98,8 @@ os.environ.setdefault("GOOGLE_CLOUD_LOCATION", VERTEX_REGION)
 
 SOLVER_MODEL_OC = env("HARNESS2_SOLVER_MODEL", "")
 SOLVER_MODEL_CX = env("HARNESS2_CODEX_MODEL", SOLVER_MODEL_OC.split("/", 1)[-1])
+SOLVER_MODEL_CC = env("HARNESS2_CLAUDE_MODEL", "")
+SOLVER_MODEL_AG = env("HARNESS2_ANTIGRAVITY_MODEL", "")
 IMPROVER_MODEL = env("HARNESS2_IMPROVER_MODEL", SOLVER_MODEL_OC)
 JUDGE_MODEL = env("HARNESS2_JUDGE_MODEL", "")
 
@@ -162,13 +164,24 @@ CODEX_CONTAINER_URL = env("HARNESS2_CODEX_CONTAINER_URL", CODEX_BASE_URL)
 VERTEX_PROXY_KEY = env("HARNESS2_CODEX_API_KEY", "")
 CODEX_HOME_DIR = DEPENDENCIES / "codex" / "home"
 
+# Antigravity is normally installed and authenticated as a user CLI. For WorkBuddy
+# it must also be available inside a container, so setup snapshots the selected
+# executable under dependencies/antigravity/dist and bind-mounts that immutable copy.
+ANTIGRAVITY_DIST = DEPENDENCIES / "antigravity" / "dist"
+ANTIGRAVITY_API_KEY = env("HARNESS2_ANTIGRAVITY_API_KEY", env("GEMINI_API_KEY", ""))
+ANTIGRAVITY_BASE_URL = env(
+    "HARNESS2_ANTIGRAVITY_BASE_URL", env("GOOGLE_GEMINI_BASE_URL", "")
+)
+
 WB_SOLVER_MODEL = "harness2/solver"
 WB_WEB_JUDGE = "harness2/judge"
 WB_RENDER_PY = sys.executable
 WB_OC_HARNESS_VER = "1.14.18"
 WB_CX_HARNESS_VER = CODEX_VERSION
-WB_MAX_JOBS = {"oc": 1, "cx": 1}
-WB_MAX_TRIALS = {"oc": 2, "cx": 2}
+WB_CC_HARNESS_VER = "2.1.187"
+WB_AG_HARNESS_VER = "1"
+WB_MAX_JOBS = {"oc": 1, "cx": 1, "cc": 1, "ag": 1}
+WB_MAX_TRIALS = {"oc": 2, "cx": 2, "cc": 2, "ag": 2}
 WB_MODEL_CONNECTION = "local_proxy"
 
 DEFAULT_PROPOSER_CHANNEL = "opencode"
