@@ -28,5 +28,12 @@ jobs:
           name: ruff-diagnostics
           path: ruff.log
       - name: Unit tests
+        id: unittest
         if: always()
-        run: python -m unittest discover -s tests -p 'test_*.py' -v
+        run: python -m unittest discover -s tests -p 'test_*.py' -v 2>&1 | tee unittest.log
+      - name: Upload unittest diagnostics
+        if: failure() && steps.unittest.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: unittest-diagnostics
+          path: unittest.log
